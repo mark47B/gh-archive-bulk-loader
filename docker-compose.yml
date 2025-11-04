@@ -1,0 +1,109 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7.0
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  mongo_loader_1:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.loader
+    container_name: mongo_loader_1
+    environment:
+      - REPLICA_ID=mongo_loader_1:1234
+      - LEADER_LEASE=5 # seconds
+    command: ["mongodb://mongo:27017", "github", "events", "redis:6379", "0"]
+    depends_on:
+      - mongo
+      - redis
+      - etcd
+    ports:
+      - "1234:1234"   # gRPC сервер
+      - "2112:2112"   # метрики Prometheus
+
+  mongo_loader_2:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.loader
+    container_name: mongo_loader_2
+    environment:
+      - REPLICA_ID=mongo_loader_2:1234
+      - LEADER_LEASE=5 # seconds
+    command: ["mongodb://mongo:27017", "github", "events", "redis:6379", "0"]
+    depends_on:
+      - mongo
+      - redis
+      - etcd
+    ports:
+      - "1235:1234"   # gRPC сервер
+      - "2113:2112"   # метрики Prometheus
+    
+  mongo_loader_3:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.loader
+    container_name: mongo_loader_3
+    environment:
+      - REPLICA_ID=mongo_loader_3:1234
+      - LEADER_LEASE=5 # seconds
+    command: ["mongodb://mongo:27017", "github", "events", "redis:6379", "0"]
+    depends_on:
+      - mongo
+      - redis
+      - etcd
+    ports:
+      - "1236:1234"   # gRPC сервер
+      - "2114:2112"   # метрики Prometheus
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - mongo_loader_1
+      - mongo_loader_2
+      - mongo_loader_3
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.15
+    container_name: etcd
+    command:
+      - /usr/local/bin/etcd
+      - --name=etcd0
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://0.0.0.0:2379
+    ports:
+      - "2379:2379"
+    volumes:
+      - etcd_data:/etcd-data
+
+volumes:
+  mongo_data:
+  grafana_data:
+  redis_data:
+  etcd_data:

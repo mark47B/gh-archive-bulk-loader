@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+
+option go_package = "proto/pb/agent";
+
+package agent;
+
+service MongoLoader {
+  rpc LoadRange(LoadRequest) returns (LoadResponse) {}
+  rpc QueryUser(UserQuery) returns (UserQueryResponse) {}
+  rpc AsyncLoadRange(LoadRequest) returns (AsyncLoadResponse) {}
+  rpc GetTaskStatus(TaskStatusRequest) returns (TaskStatusResponse) {}
+}
+
+message AsyncLoadResponse {
+  string task_id = 1;
+}
+
+message TaskStatusRequest {
+  string task_id = 1;
+}
+
+message TaskStatusResponse {
+  string task_id = 1;
+  string status = 2;         
+  int64 urls_total = 3;
+  int64 urls_done = 4;
+  int64 inserted = 5;
+  string error = 6;
+  google.protobuf.Timestamp start_date = 7;
+  google.protobuf.Timestamp end_date = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+
+message LoadRequest {
+  string start_date = 1;
+  string end_date   = 2;
+}
+
+message LoadResponse {
+  int64 inserted_count = 1;
+}
+
+message UserQuery {
+  string username = 1;
+}
+
+message EventCount {
+  string name = 1;
+  int64 count = 2;
+}
+
+message YearMonthEvents {
+  int32 year = 1;
+  int32 month = 2;
+  repeated EventCount events = 3;
+}
+
+message UserQueryResponse {
+  repeated EventCount events = 1;
+  repeated YearMonthEvents events_by_ym = 2;
+  repeated string pushed_to = 3;
+}
